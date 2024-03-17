@@ -1,5 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env['NEXT_PUBLIC_OPENAI_API_KEY'],
+  dangerouslyAllowBrowser: true,
+});
 
 import Image from 'next/image';
 import { Web3Auth } from '@web3auth/modal';
@@ -35,6 +41,7 @@ export default function Home() {
   const [provider, setProvider] = useState<IProvider | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [prompt, setPrompt] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   useEffect(() => {
     const init = async () => {
@@ -134,9 +141,29 @@ export default function Home() {
     console.log(...args);
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     uiConsole(prompt);
+
+    const response = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt: prompt,
+      n: 1,
+      size: '1024x1024',
+    });
+
+    if (response.data[0].url) {
+      setImageUrl(response.data[0].url);
+    } else {
+      // Handle the case where the URL is undefined
+      // For example, set a default image URL or log an error
+      console.error('No URL returned from the API');
+      setImageUrl('path/to/default/image.png'); // Example default path
+    }
+
+    // Convert to NFT
+    // Save prompt, its hash and image to IPFS
+    // Mint NFT with metadata
   };
 
   const loggedInView = (
@@ -182,6 +209,14 @@ export default function Home() {
           </div>
           <button type="submit">Submit</button>
         </form>
+        {imageUrl && (
+          <Image
+            src={imageUrl}
+            width={1024}
+            height={1024}
+            alt="image of prompt"
+          />
+        )}
       </div>
     </>
   );
@@ -199,3 +234,12 @@ export default function Home() {
     </>
   );
 }
+
+// ToDo: Refactor the above code into
+// 1. Components - loggedIn vs loggedOut
+// 2. pages/api - for call OpenAI API and image generation with prompt
+// 3. pages/api - for minting NFT
+// 4. pages/api - for IPFS upload
+// 5. Messi | MS Dhoni | Water crisis in Bengaluru | US Elections  cron-job + AI Agent - find top trending topics and generate prompts + convert into images
+// Hackernews API
+// Farcaster API
