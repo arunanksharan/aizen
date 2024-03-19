@@ -136,6 +136,55 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
 
     }
 
+    function transferAndChangeRecovery(address to, address recovery, uint256 deadline, bytes calldata sig) external {
+        uint256 fromId = _validateTransfer(msg.sender, to);
+        _verifyTransferAndChangeRecoverySig(
+            {
+                aid: fromId, 
+                to: to, 
+                recovery: recovery, 
+                deadline: deadline, 
+                signer: to, 
+                sig: sig
+            });
+        _unsafeTransfer(fromId, msg.sender, to);
+        _unsafeChangeRecovery(fromId, recovery);
+    }
+
+    function transferFor(address from, address to, uint256 fromDeadline, bytes calldata sig fromSig, uint256 toDeadline, bytes calldata toSig) external {
+        uint256 fromId = _validateTransfer(from, to);
+
+        /* Revert if either signature is invalid */
+        _verifyTransferSig({aid: fromId, to: to, deadline: fromDeadline, signer: from, sig: fromSig});
+        _verifyTransferSig({aid: fromId, to: to, deadline: toDeadline, signer: to, sig: toSig});
+        _unsafeTransfer(fromId, from, to);
+
+    }
+
+    function transferAndChangeRecoveryFor(address from, address to, address recovery, uint256 fromDeadline, bytes calldata sig fromSig, uint256 toDeadline, bytes calldata toSig) external {
+        uint256 fromId = _validateTransfer(from, to);
+        
+        /* Revert if either signature is invalid */
+        _verifyTransferAndChangeRecoverySig({aid: fromId, to: to, recovery: recovery, deadline: fromDeadline, signer: from, sig: fromSig});
+
+        _verifyTransferAndChangeRecoverySig({aid: fromId, to: to, recovery: recovery, deadline: toDeadline, signer: to, sig: toSig});
+
+        _unsafeTransfer(fromId, from, to);
+        _unsafeChangeRecovery(fromId, recovery);
+
+    }
+
+
+    // RECOVERY LOGIC
+    
+
+    // MIGRATION LOGIC
+
+
+
+// INTERNAL FUNCTIONS AND SIGNATURE HELPERS
+
+
     /**
      * @inheritdoc IIdRegistry
      * 1. from address should have an id assigned to it
@@ -168,6 +217,19 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
     }
 
     /**
+     * 
+     * @inheritdoc IIdRegistry
+     * 1. Verify signature
+     */
+    function _verifyTransferAndChangeRecoverySig(uint256 aid, address to, address recovery, uint256 deadline, address signer, bytes memory sig) internal {
+        _verifySig(
+            _hashTypedDataV4(keccak256(abi.encode(TRANSFER_AND_CHANGE_RECOVERY_TYPEHASH, aid, to, recovery, _useNonce(signer), deadline))),
+            signer,
+            deadline,
+            sig);
+    }
+
+    /**
      * @inheritdoc IIdRegistry
      * 1. Update the idOf and custodyOf mappings
      * 2. Emit the Transfer event
@@ -179,9 +241,14 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
         emit Transfer(from, to, id);
     }
 
-
-// RECOVERY LOGIC
-
-// MIGRATION LOGIC
+    /**
+     * 
+     * @inheritdoc IIdRegistry
+     * 1. Update the recoveryOf mapping 
+     */
+    function _unsafeChangeRecovery(uint256 id, address recovery) internal whenNotPaused {
+        recoveryOf[id] = recovery;
+        emit ChangeRecoveryAddress(id, recovery);
+    }
 
 }
