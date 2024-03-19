@@ -144,7 +144,7 @@ interface IIdRegistry {
     /**
      * @notice Check if idGateway is disabled/frozen
      */
-    function isIdGatewayFrozen() external view returns (bool);
+    function gatewayFrozen() external view returns (bool);
 
     /**
      * @notice Last aizen_id issued
