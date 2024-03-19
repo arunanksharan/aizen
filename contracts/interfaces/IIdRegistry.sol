@@ -25,6 +25,9 @@ interface IIdRegistry {
     /// @dev Revert when the caller should have an id but does not
     error HasNoId();
 
+    /// @dev Revert when the caller should not have an id but does
+    error HasId();
+
     /// @dev Revert when Gateway is disabled/frozen
     error GatewayFrozen();
 
