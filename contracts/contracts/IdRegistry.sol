@@ -176,13 +176,137 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
 
 
     // RECOVERY LOGIC
-    
+    /**
+     * @inheritdoc IIdRegistry
+     */
+
+    function changeRecoveryAddress(address recovery) external whenNotPaused {
+        /* Revert if the caller does not own the id */
+        uint256 ownerId = idOf[msg.sender];
+        if (ownerId == 0) revert HasNoId();
+
+        _unsafeChangeRecovery(ownerId, recovery);
+    }
+
+    /**
+     * @inheritdoc IIdRegistry
+     */
+    function changeRecoveryAddressFor(address custody, address recovery, uint256 deadline, bytes calldata sig) external whenNotPaused {
+        /* Revert if the caller does not own the id */
+        uint256 ownerId = idOf[custody];
+        if (ownerId == 0) revert HasNoId();
+
+        _verifyChangeRecoveryAddressSig({aid: ownerId, 
+        from: recoveryOf[ownerId], to: recovery, deadline: deadline, signer: custody, sig: sig})
+
+        _unsafeChangeRecovery(ownerId, recovery);
+    }
+
+
+    /**
+     * @inheritdoc IIdRegistry
+     */
+    function recover(address from, address to, uint256 deadline, bytes calldate sig) external {
+        /* Revert if the caller does not own the id */
+        uint256 fromId = idOf[from];
+        if (fromId == 0) revert HasNoId();
+
+        /* Revert if caller is not the recovery address */
+        address caller = msg.sender;
+        if (recoveryOf[fromId] != caller) revert Unauthorized();
+
+        /* Revert if destination/to address has an aizen_id */
+        if (idOf[to] != 0) revert HasId();
+
+        /* Revert if the signature is invalid */
+        _verifyTransferSig({aid: fromId, to: to, deadline: deadline, signer: to, sig: sig});
+
+        emit Recover(from, to, fromId);
+        _unsafeTransfer(fromId, from, to);
+    }
+
+    /**
+     * @inheritdoc IIdRegistry
+     */
+    function recoverFor(address from, address to, uint256 recoveryDeadline, bytes calldata recoverySig, uint256 toDeadline, bytes calldata toSig) external {
+        /* Revert if from address does not have an aizen_id */
+        uint256 fromId = idOf[from];
+        if (fromId == 0) revert HasNoId();
+
+        /* Revert if destination/to already has an aizen_id */
+        if (idOf[to] != 0) revert HasId();
+
+        /* Revert if either signature is invalid */
+        _verifyTransferSig({aid: fromId, to: to, deadline: recoveryDeadline, signer: recoveryOf[fromId], sig: recoverySig});
+
+        _verifyTransferSig({aid: fromId, to: to, deadline: toDeadline, signer: to, sig: toSig});
+
+        emit Recover(from, to, fromId);
+        _unsafeTransfer(fromId, from, to);
+
+    }
+
 
     // MIGRATION LOGIC
+    function bulkRegisterIds(BulkRegisterData[] calldata ids) external onlyMigrator {
+        unchecked {
+            for (uint256 i=0; i < ids.length; i++) {
+                BulkRegisterData calldata id = ids[i];
+                if (idOf[id.custody] != 0) revert HasId();
+                _unsafeRegister(id.aid, id.custody, id.recovery);
+            }
+        }
+    }
+
+    function bulkRegisterIdsWithDefaultRecovery(
+        BulkRegisterDefaultRecoveryData[] calldata ids,
+        address recovery
+    ) external onlyMigrator {
+        // Safety: i can be incremented unchecked since it is bound by ids.length.
+        unchecked {
+            for (uint256 i = 0; i < ids.length; i++) {
+                BulkRegisterDefaultRecoveryData calldata id = ids[i];
+                if (idOf[id.custody] != 0) revert HasId();
+                _unsafeRegister(id.aid, id.custody, recovery);
+            }
+        }
+    }
+
+    function bulkResetIds(uint256[] calldata ids) external onlyMigrator {
+        unchecked {
+            for (uint256 i=0; i < ids.length; i++) {
+                uint256 id = ids[i];
+                address custody = custodyOf[id];
+
+                idOf[custody] = 0;
+                custodyOf[id] = address(0);
+                recoveryOf[id] = address(0);
+                emit AdminReset(id);
+            }
+        }
+    }
+
+    function setIdCounter(uint256 _counter) external onlyMigrator {
+        emit SetIdCounter(idCounter, _counter);
+        idCounter = _counter;
+    }
+
+    // Views
+    /**
+     * @inheritdoc IIdRegistry
+     * Verify aizen id's signature
+     */
+    function verifyAizenIdSignature(
+        address custodyAddress,
+        uint256 aid,
+        bytes digest,
+        bytes calldata sig
+    ) external view retuns (bool isValid) {
+        isValid = idOf[custodyAddress] == aid && SignatureChecker.isValidSignatureNow(custodyAddress, digest, sig);
+    };
 
 
-
-// INTERNAL FUNCTIONS AND SIGNATURE HELPERS
+    // INTERNAL FUNCTIONS AND SIGNATURE HELPERS
 
 
     /**
@@ -249,6 +373,34 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
     function _unsafeChangeRecovery(uint256 id, address recovery) internal whenNotPaused {
         recoveryOf[id] = recovery;
         emit ChangeRecoveryAddress(id, recovery);
+    }
+
+    function _verifyChangeRecoveryAddressSig(uint256 aid, address from, address to, uint256 deadline, address signer, bytes memory sig) internal {
+        _verifySig(
+            _hashTypedDataV4(keccak256(abi.encode(CHANGE_RECOVERY_ADDRESS_TYPEHASH, aid, from, to, _useNonce(signer), deadline))), signer, deadline, sig)
+    }
+
+
+    
+
+
+    // ADMIN PERMISSIONED FUNCTIONS
+    /**
+     * @inheritdoc IIdRegistry
+     */
+    function setIdGateway(address _idGateway) external onlyOwner {
+        if (gatewayFrozen) revert GatewayFrozen();
+        emit SetIdGateway(idGateway, _idGateway);
+        idGateway = _idGateway;
+    }
+
+    /**
+     * @inheritdoc IIdRegistry
+     */
+    function freezeIdGateway() external onlyOwner {
+        if (gatewayFrozen) revert GatewayFrozen();
+        emit FreezeIdGateway(idGateway);
+        gatewayFrozen = true;
     }
 
 }

@@ -3,13 +3,13 @@ pragma solidity 0.8.19;
 
 interface IIdRegistry {
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Structs XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    struct RegisterData {
+    struct BulkRegisterData {
         uint256 aid; // aizen id
         address custody; // custody address
         address recovery; // recovery address
     }
 
-    struct RegisterDefaultRecoveryData {
+    struct BulkRegisterDefaultRecoveryData {
         uint256 aid;
         address custody;
     }
