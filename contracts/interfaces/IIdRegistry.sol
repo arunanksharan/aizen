@@ -4,9 +4,14 @@ pragma solidity 0.8.19;
 interface IIdRegistry {
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Structs XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     struct RegisterData {
-        uint256 id; // aizen id
+        uint256 aid; // aizen id
         address custody; // custody address
         address recovery; // recovery address
+    }
+
+    struct RegisterDefaultRecoveryData {
+        uint256 aid;
+        address custody;
     }
 
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Errors XXXXXXXXXXX
@@ -84,6 +89,22 @@ interface IIdRegistry {
      */
     event FreezeIdGateway(address idGateway);
 
+    // Admin Events
+    /**
+     * @notice Emit event when migration occurs - admin sets the idCounter
+     *
+     * @param oldCounter uint256 oldCounter - the old idCounter
+     * @param newCounter uint256 newCounter - the new idCounter
+     */
+    event SetIdCounter(uint256 oldCounter, uint256 newCounter);
+
+    /**
+     * @notice Emit event when migration admin resets the aizen_id
+     *
+     * @param aid The reset aizen_id
+     */
+    event AdminReset(uint256 indexed aid);
+
     // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX CONSTANTS XXXXXXXXXXX
     /**
      * @notice Defined for compatibility with tools like etherscan - detect id transfer as token transfer
@@ -133,15 +154,198 @@ interface IIdRegistry {
     /**
      * @notice Mapping of address to aizen_id | returns 0 if address does not have an aizen_id
      */
-    function idOf(address custody) external view returns (uint256 id);
+    function idOf(address custody) external view returns (uint256 aid);
 
     /**
      * @notice Mapping of aizen_id to custody address that owns the aizen_id
      */
-    function custodyOf(uint256 id) external view returns (address custody);
+    function custodyOf(uint256 aid) external view returns (address custody);
 
     /**
      * @notice Mapping of aizen_id to recovery address
      */
-    function recoveryOf(uint256 id) external view returns (address recovery);
+    function recoveryOf(uint256 aid) external view returns (address recovery);
+
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FUNCTIONS XXXXXXXXXXX
+
+    /**
+     * @notice Register a new aizen_id for a given custody address & setup a recovery address
+     * 1. Caller must be the IdGateway contract
+     * 2. aid - counter incremented | extended later - external system can provide an id as well || fetch the id from contract and use it
+     */
+    function register(
+        address to,
+        address recovery
+    ) external returns (uint256 aid);
+
+    /**
+     * @notice Set IdGateway address allowed to register aizen ids | Only callable by owner
+     *
+     * @param _idGateway address _idGateway - the new IdGateway address
+     */
+    function setIdGateway(address _idGateway) external;
+
+    /**
+     * @notice Freeze IdGateway | Only callable by owner
+     */
+    function freezeIdGateway() external;
+
+    /** XXXXXXXXXXXXXXXXXXX TRANSFER LOGIC XXXXXXXXXXXXXXXXXXX */
+
+    /**
+     * @notice Transfer the custody of aizen_id from one address to another address
+     * 1. The new address should not have an aizen_id assigned to it
+     * 2. A signed Transfer message from the destination address must be provided
+     *
+     *
+     */
+    function transfer(
+        address to,
+        uint256 deadline,
+        bytes calldata sig
+    ) external;
+
+    /**
+     * @notice Transfer the custody of aizen_id from one address to another address and change the recovery address - safely receive aid from an untrusted address
+     * 1. The new address should not have an aizen_id assigned to it
+     * 2. A signed TransferAndChangeRecovery message from the destination address must be provided
+     *
+     * @param to address to - the new custody address
+     * @param recovery address recovery - the new recovery address
+     * @param deadline uint256 deadline - the Expiration timestamp for the signature
+     * @param sig bytes sig - the signature of the message | EIP712 signature signed by the to (recipient/destiantion) address
+     */
+    function transferAndChangeRecovery(
+        address to,
+        address recovery,
+        uint256 deadline,
+        bytes calldata sig
+    ) external;
+
+    /**
+     * @notice Transfer aizen id owned by from address to another address
+     * 1. The new address must not have an aizen_id assigned to it
+     * 2. Caller must provide two signatures - one signed by from/owner/custody address and one signed by to/recipient/destination address
+     * @param from address from - the current custody address of aizen_id
+     * @param to address to - the new custody address
+     * @param fromDeadline uint256 fromDeadline - the Expiration timestamp for the from signature
+     * @param toDeadline uint256 toDeadline - the Expiration timestamp for the to signature
+     * @param fromSig bytes fromSig - the signature of the message | EIP712 signature signed by the from (owner/custody) address
+     * @param toSig bytes toSig - the signature of the message | EIP712 signature signed by the to (recipient/destination) address
+     */
+    function transferFor(
+        address from,
+        address to,
+        uint256 fromDeadline,
+        bytes calldata fromSig,
+        uint256 toDeadline,
+        bytes calldata toSig
+    ) external;
+
+    /**
+     * @notice Transfer the custody of aizen_id from one address to another address and change the recovery address - safely receive aid from an untrusted address
+     * 1. The new address should not have an aizen_id assigned to it
+     * 2. Caller must provide two signatures - one signed by from/owner/custody address and one signed by to/recipient/destination address
+     *
+     * @param from address from - the current custody address of aizen_id
+     * @param to address to - the new custody address
+     * @param fromDeadline uint256 fromDeadline - the Expiration timestamp for the from signature
+     * @param toDeadline uint256 toDeadline - the Expiration timestamp for the to signature
+     * @param fromSig bytes fromSig - the signature of the message | EIP712 signature signed by the from (owner/custody) address
+     * @param toSig bytes toSig - the signature of the message | EIP712 signature signed by the to (recipient/destination) address
+     */
+    function transferAndChangeRecoveryFor(
+        address from,
+        address to,
+        address recovery,
+        uint256 fromDeadline,
+        bytes calldata fromSig,
+        uint256 toDeadline,
+        bytes calldata toSig
+    ) external;
+
+    /** XXXXXXXXXXXXXXXXXXX RECOVERY LOGIC XXXXXXXXXXXXXXXXXXX */
+
+    /**
+     * @notice Change the recovery address of aizen_id owned by the caller
+     *
+     * @param recovery The address to set as the new recovery address | Set to 0x0 to disable recovery
+     */
+    function changeRecoveryAddress(address recovery) external;
+
+    /**
+     * @notice Change the recovery address of aizen_id owned by the caller
+     * 1. Caller must provide a valid signature from the owner
+     *
+     * @param custody address custody - the current custody address of aizen_id
+     * @param recovery address recovery - the new recovery address
+     * @param deadline uint256 deadline - the Expiration timestamp for the signature
+     * @param sig bytes sig - the signature of the message | EIP712 signature signed by the custody address
+     */
+    function changeRecoveryAddressFor(
+        address custody,
+        address recovery,
+        uint256 deadline,
+        bytes calldata sig
+    ) external;
+
+    /**
+     * @notice Transfer the aizen_id from the from address to the to address
+     * 1. Must be called by the recovery address
+     * 2. The new address should not have an aizen_id assigned to it
+     * A signed message from the to address must be provided
+     *
+     * @param from address from - the current custody address of aizen_id
+     * @param to address to - the new custody address
+     * @param toDeadline uint256 deadline - the Expiration timestamp for the signature
+     * @param sig bytes sig - the signature of the message | EIP712 signature signed by the to (recipient/destination) address
+     */
+
+    function recover(
+        address from,
+        address to,
+        uint256 toDeadline,
+        bytes calldata sig
+    ) external;
+
+    /**
+     * @notice Transfer the aizen_id from the from address to the to address
+     * 1. Must be called by the recovery address
+     * 2. Caller must provide a valid signature from the recovery as well as to address
+     *
+     * @param from address from - the current custody address of aizen_id
+     * @param to address to - the new custody address
+     * @param recoveryDeadline uint256 recoveryDeadline - the Expiration timestamp for the signature
+     * @param toDeadline uint256 toDeadline - the Expiration timestamp for the signature
+     * @param recoverySig bytes recoverySig - the signature of the message | EIP712 signature signed by the from (owner/custody) address
+     * @param toSig bytes toSig - the signature of the message | EIP712 signature signed by the to (recipient/destination) address
+     */
+
+    function recoverFor(
+        address from,
+        address to,
+        uint256 recoveryDeadline,
+        bytes calldata recoverySig,
+        uint256 toDeadline,
+        bytes calldata toSig
+    ) external;
+
+    // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX VIEWS FUNCTIONS XXXXXXXXXXX
+
+    /**
+     * @notice Verify a signature was produced by custody address owning the aizen_id
+     *
+     * @param custodyAddress The address to check the signature of
+     * @param aid The aizen_id to check the signature for
+     * @param digest The hash of the message to check the signature for | Digest signed by the custody address
+     * @param sig The signature to check
+     *
+     * @return isValid True if the signature is valid, false otherwise
+     */
+    function verifyAizenIdSignature(
+        address custodyAddress,
+        uint256 aid,
+        bytes32 digest,
+        bytes calldata sig
+    ) external view returns (bool isValid);
 }
