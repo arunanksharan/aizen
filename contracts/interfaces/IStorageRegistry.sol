@@ -104,11 +104,11 @@ interface IStorageRegistry {
      * @notice Rent storage for a givenfid for a year | Caller to provide atleast price(units) in wei of payment | Excess payment is refunded to caller
      * 1. Nodes provide storage for 365 days from the time of payment + 30 days grace
      *
-     * @param aid Aizen ID of the caller which receives the storage units
+     * @param id Aizen ID of the caller which receives the storage units
      * @param units Number of storage units to rent
      */
     function rent(
-        uint256 aid,
+        uint256 id,
         uint256 units
     ) external payable returns (uint256 overpayment);
 
@@ -141,10 +141,10 @@ interface IStorageRegistry {
     /**
      * @notice Credit a single aid with free storage units | Can be called by the operator
      *
-     * @param aid Aizen ID to credit
+     * @param id Aizen ID to credit
      * @param units Number of storage units to credit
      */
-    function credit(uint256 aid, uint256 units) external;
+    function credit(uint256 id, uint256 units) external;
 
     /**
      * @notice Credit multiple aids with free storage units | Can be called by the operator

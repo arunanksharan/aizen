@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {IGuardians} from "../interfaces/IGuardians.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 abstract contract Guardians is IGuardians, Ownable2Step, Pausable {
     /**

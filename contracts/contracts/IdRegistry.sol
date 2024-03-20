@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
-import {IIdRegistry} from "./interfaces/IIdRegistry.sol";
-import {EIP712} from "./abstract/EIP712.sol";
-import {Signatures} from "./abstract/Signatures.sol";
-import {Nonces} from "./abstract/Nonces.sol";
-import {Migration} from "./abstract/Migration.sol";
+import {IIdRegistry} from "../interfaces/IIdRegistry.sol";
+import {EIP712} from "../abstract/EIP712.sol";
+import {Signatures} from "../abstract/Signatures.sol";
+import {Nonces} from "../abstract/Nonces.sol";
+import {Migration} from "../abstract/Migration.sol";
 
 /**
  * @title Aizen Id Registry
