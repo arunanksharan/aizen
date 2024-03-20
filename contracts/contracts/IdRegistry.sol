@@ -29,7 +29,7 @@ contract IdRegistry is IIdRegistry, Migration, Signatures, EIP712, Nonces {
     /**
      * @inheritdoc IIdRegistry
      */
-    string public constant VERSION = "2024.03.19"      // YYYY-MM-DD
+    string public constant VERSION = "2024.03.20"      // YYYY-MM-DD
 
     /**
      * @inheritdoc IIdRegistry

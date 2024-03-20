@@ -405,7 +405,7 @@ contract StorageRegistry is
         overpayment = msg.value - totalPrice;
 
         if (overpayment > 0) {
-            msg.sender.safeTransferETH(overpayment);    // Change to sendNative when library defined
+            msg.sender.sendNative(overpayment);    // Change to sendNative when library defined
         }
         
     }
@@ -461,7 +461,7 @@ contract StorageRegistry is
         // Interactions
         // Safety Check: Transfer any overpayment back to the caller
         if (msg.value > totalPrice) {
-            msg.sender.safeTransferETH(msg.value - totalPrice);    // Change to sendNative when library defined
+            msg.sender.sendNative(msg.value - totalPrice);    // Change to sendNative when library defined
         }
     }
 
@@ -747,7 +747,7 @@ contract StorageRegistry is
         if (amount == 0) revert InvalidAmount();
         if (amount > address(this).balance) revert InvalidAmount();
         emit Withdraw(vault, amount);
-        vault.safeTransferETH(amount);
+        vault.sendNative(amount);
     }
 
     /**
