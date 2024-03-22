@@ -9,10 +9,14 @@ import {
   PlusSquare,
   User,
 } from 'react-feather';
+import { useCreatePostContext } from '@/store/CreatePostContext';
 
 const SideBar: React.FC = () => {
+  const { creationStarted, setCreationStarted } = useCreatePostContext();
+
   const createHandler = () => {
     console.log('Create button clicked');
+    setCreationStarted(true);
   };
   return (
     <div className="z-10">
