@@ -5,8 +5,10 @@ const nextConfig = {
       'oaidalleapiprodscus.blob.core.windows.net',
       'cdn.openart.ai',
       'oaidalleapiprodscus.blob.core.windows.net',
+      'rohzlgxaoelpqmifsaof.supabase.co',
     ],
   },
+  reactStrictMode: false,
 };
 
 export default nextConfig;

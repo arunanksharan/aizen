@@ -1,0 +1,36 @@
+{
+  "items": {
+    "bootstrap": [
+      {
+        "id": 1,
+        "title": "He Man",
+        "body": "Masters of the Universe",
+        "imageUrl": "/1_heman.webp"
+      },
+      {
+        "id": 2,
+        "title": "Napolean",
+        "body": "Napolean Negotiating",
+        "imageUrl": "/2_napolean.webp"
+      },
+      {
+        "id": 3,
+        "title": "NFT Cat",
+        "body": "NFT Aesthetics with a Cat",
+        "imageUrl": "/3_nftish.webp"
+      },
+      {
+        "id": 4,
+        "title": "Border Collie",
+        "body": "Dog wearing jacket",
+        "imageUrl": "/4_dog.webp"
+      },
+      {
+        "id": 5,
+        "title": "Woman",
+        "body": "Asian women with chopsticks",
+        "imageUrl": "/6_woman.webp"
+      }
+    ]
+  }
+}
